@@ -1,0 +1,187 @@
+package infrapunaohjaus;
+
+import java.io.File;
+
+import lejos.hardware.Button;
+import lejos.hardware.Key;
+import lejos.hardware.Sound;
+import lejos.hardware.lcd.LCD;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
+import lejos.hardware.port.MotorPort;
+import lejos.hardware.port.SensorPort;
+import lejos.hardware.sensor.EV3ColorSensor;
+import lejos.hardware.sensor.EV3IRSensor;
+import lejos.robotics.Color;
+import lejos.robotics.RegulatedMotor;
+import lejos.utility.Delay;
+
+public class IRCheck extends Thread {
+/**
+ * alustetaan metodimuuttujat
+ */
+	
+	private int color = 0;
+	private int count = 0;
+/**
+ * m‰‰ritell‰‰n mitk‰ moottorit infrapunasensorin ohjaukseen
+ */
+	private EV3IRSensor infraredSensor;
+	RegulatedMotor m1;
+	RegulatedMotor m2;
+	RegulatedMotor m3;
+	RegulatedMotor m4;
+
+	public IRCheck(EV3IRSensor sensor, RegulatedMotor m1, RegulatedMotor m2, RegulatedMotor m3, RegulatedMotor m4) {
+		this.infraredSensor = sensor;
+		this.m1 = m1;
+		this.m2 = m2;
+		this.m3 = m3;
+		this.m4 = m4;
+	}
+/**
+ * aloitetaan ohjaus thread
+ */
+	public void run() {
+		while (!Button.ENTER.isDown()) {
+
+			int remoteCommand = this.infraredSensor.getRemoteCommand(2);
+			LCD.drawString("Painoit: " + remoteCommand, 0, 0);
+/**
+ * alustetaan synkronisointi
+ */
+			this.m1.synchronizeWith(new RegulatedMotor[] { m2 });
+
+
+/**
+ * m‰‰ritell‰‰n toiminnot  jokaiselle kauko-ohjaimen 
+ * painallukselle erikseen.
+ * samalla moottorien liikkeet synkronoidaan.
+ */
+			if (remoteCommand == 0) {
+				
+				m1.startSynchronization();
+				this.m1.stop();
+				this.m2.stop();
+				m1.endSynchronization();
+
+			}
+
+			if (remoteCommand == 1) {
+				
+				m1.startSynchronization();
+				this.m1.backward();
+				this.m2.backward();
+				m1.endSynchronization();
+			}
+
+			if (remoteCommand == 2) {
+				
+				m1.startSynchronization();
+				this.m1.forward();
+				this.m2.forward();
+				m1.endSynchronization();
+			}
+			if (remoteCommand == 4) {
+				
+				m1.startSynchronization();
+				this.m1.forward();
+				this.m2.backward();
+				m1.endSynchronization();
+			}
+			if (remoteCommand == 3) {
+				
+				m1.startSynchronization();
+				this.m1.backward();
+				this.m2.forward();
+				m1.endSynchronization();
+			}
+			if (remoteCommand == 5) {
+				/**
+				 * t‰ss‰ infrapunaohjaimen komennossa
+				 * asetetaan aluksi metodimuuttuja color nollaksi.
+				 * 
+				 */
+				this.color = 0;
+				/**
+				 * alussa on yksinkertainen loop timer
+				 * jonka tarkoitus on est‰‰ bugi jossa kontrolleri 
+				 * sekoittaa case 1:sen ja case 5:den, joka aiheuttaa 
+				 * case 1:sen "p‰‰lle j‰‰misen" hetkeksi.
+				 */
+				while (true) {
+					
+
+					if (this.count > 5) {
+						break;
+					} else {
+						this.count = this.count + 1;
+					}
+				}
+				/**
+				 * k‰ynnistet‰‰n v‰rianturi, jonka j‰lkeen
+				 * luetaan sensoria. mik‰li sensori havaitsee punaisen
+				 * kuulan katapultin korissa, ohjelma etenee ampumis vaiheeseen.
+				 * mik‰li sensori ei havaitse punaista kuulaa, laite ilmoittaa
+				 * puuttuvasta ammuksesta liikkumalla hieman ja koittamalla
+				 * ladata katapultin viel‰ uudestaan, silt‰ varalta, ett‰ lippaassa
+				 * oli vain tyhj‰ paikka ammusten v‰liss‰.
+				 */
+				EV3ColorSensor cs = new EV3ColorSensor(SensorPort.S3);
+
+				switch (cs.getColorID()) {
+				case Color.RED:
+					this.color = 1;
+					break;
+				case Color.BLACK:
+					this.color = 0;
+					break;
+				case Color.WHITE:
+					this.color = 0;
+					break;
+
+				}
+				cs.close();
+				if (this.color == 1) {
+					m1.startSynchronization();
+					this.m3.setAcceleration(12000);
+					this.m3.setSpeed((int) this.m3.getMaxSpeed());
+					this.m3.rotate(-50);
+					this.m3.stop();
+					Delay.msDelay(500);
+					this.m3.setAcceleration(1000);
+					this.m3.setSpeed(50);
+					this.m3.rotate(50);
+					this.m3.stop();
+
+					Delay.msDelay(500);
+					this.m4.rotate(90);
+					this.m4.stop();
+					m1.endSynchronization();
+					color = 0;
+
+				}
+				else {
+					Delay.msDelay(100);
+					m1.startSynchronization();
+					this.m1.rotate(100);
+					this.m2.rotate(-100);
+					m1.endSynchronization();
+					Delay.msDelay(1000);
+					m1.startSynchronization();
+					this.m1.rotate(-200);
+					this.m2.rotate(200);
+					m1.endSynchronization();
+					Delay.msDelay(1000);
+					m1.startSynchronization();
+					this.m1.rotate(100);
+					this.m2.rotate(-100);
+					m1.endSynchronization();
+					Delay.msDelay(1000);
+					this.m4.rotate(90);
+					this.m4.stop();
+					color = 0;
+				}
+			}
+		}
+	}
+}
