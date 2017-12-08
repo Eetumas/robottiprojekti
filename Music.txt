@@ -1,0 +1,39 @@
+package infrapunaohjaus;
+/**
+ * t‰m‰ ohjelma soittaa musiikkitiedostoa omassa threadissaan
+ */
+ 
+
+import java.io.File;
+
+import lejos.hardware.Button;
+import lejos.hardware.Sound;
+import lejos.hardware.lcd.LCD;
+import lejos.utility.Delay;
+
+public class Music extends Thread {
+	private IRCheck infraRed;
+
+	public Music(IRCheck infraRed) {
+		this.infraRed = infraRed;
+	}
+/**
+ * k‰ynnistet‰‰n musiikki thread, jonka j‰lkeen thread looppaa
+ * musiikkitiedostoa.
+ */
+	public void run() {
+		while (!Button.ENTER.isDown()) {
+			while (true) {
+
+				LCD.drawString("Playing music", 0, 1);
+				File music = new File("Terminator1.wav");
+				Sound.playSample(music, 100);
+
+				Sound.setVolume(100);
+
+			}
+
+		}
+	}
+}
+
